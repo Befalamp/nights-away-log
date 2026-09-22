@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#2f4636">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>Nights Away Log</title>
 <style>
   :root {
@@ -399,6 +401,10 @@
   }
 
   loadSettings();
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(err => console.error('SW registration failed:', err));
+  }
 </script>
 </body>
 </html>
