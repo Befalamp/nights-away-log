@@ -165,6 +165,14 @@
       <label class="chip"><input type="checkbox" value="Greenfield"> Greenfield</label>
     </div>
 
+    <label>Section</label>
+    <div class="checkrow" id="sectionChips">
+      <label class="chip"><input type="checkbox" value="Beavers"> Beavers</label>
+      <label class="chip"><input type="checkbox" value="Cubs"> Cubs</label>
+      <label class="chip"><input type="checkbox" value="Scouts"> Scouts</label>
+      <label class="chip"><input type="checkbox" value="Explorers/Young Leaders"> Explorers/Young Leaders</label>
+    </div>
+
     <div class="row2">
       <div>
         <label for="fRole">Role</label>
@@ -309,7 +317,7 @@
   document.getElementById('filterTo').addEventListener('change', render);
 
   // ---- CHIP STYLING ----
-  document.querySelectorAll('#typeChips input[type="checkbox"]').forEach(cb => {
+  document.querySelectorAll('#typeChips input[type="checkbox"], #sectionChips input[type="checkbox"]').forEach(cb => {
     cb.addEventListener('change', () => {
       cb.closest('label').classList.toggle('checked', cb.checked);
     });
@@ -321,6 +329,7 @@
     if (!date) { alert('Please set a date.'); return; }
     const types = Array.from(document.querySelectorAll('#typeChips input:checked')).map(cb => cb.value);
     if (types.length === 0) { alert('Please tick at least one type.'); return; }
+    const sections = Array.from(document.querySelectorAll('#sectionChips input:checked')).map(cb => cb.value);
     const role = document.getElementById('fRole').value;
     const nights = Number(document.getElementById('fNights').value) || 1;
     const venue = document.getElementById('fVenue').value.trim();
@@ -330,13 +339,13 @@
     const addBtn = document.getElementById('addBtn');
     addBtn.disabled = true;
 
-    eventsCol.add({ date, types, role, nights, venue, yp, notes, created: Date.now() })
+    eventsCol.add({ date, types, sections, role, nights, venue, yp, notes, created: Date.now() })
       .then(() => {
         document.getElementById('fVenue').value = '';
         document.getElementById('fYP').value = '';
         document.getElementById('fNotes').value = '';
         document.getElementById('fNights').value = 1;
-        document.querySelectorAll('#typeChips input').forEach(cb => { cb.checked = false; cb.closest('label').classList.remove('checked'); });
+        document.querySelectorAll('#typeChips input, #sectionChips input').forEach(cb => { cb.checked = false; cb.closest('label').classList.remove('checked'); });
         setStatus('Saved.', 'ok');
       })
       .catch(err => setStatus('Could not save: ' + err.message, 'error'))
@@ -390,7 +399,7 @@
           <div class="entry-date">${fmtDate(e.date)}</div>
           <div class="entry-nights">${e.nights} night${e.nights == 1 ? '' : 's'}</div>
         </div>
-        <div class="entry-types">${(e.types || []).join(' + ')}</div>
+        <div class="entry-types">${(e.types || []).join(' + ')}${(e.sections && e.sections.length) ? ' — ' + e.sections.join(', ') : ''}</div>
         <div class="entry-meta">${e.role}${e.venue ? ' at ' + e.venue : ''}${e.yp != null ? ' — ' + e.yp + ' young people' : ''}</div>
         ${e.notes ? `<div class="entry-notes">${e.notes.replace(/</g, '&lt;')}</div>` : ''}
         <div class="entry-actions no-print">
