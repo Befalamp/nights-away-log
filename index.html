@@ -198,6 +198,7 @@
     <textarea id="fNotes" placeholder="Anything worth remembering — group, section, weather, incidents, etc."></textarea>
 
     <button class="btn-primary" id="addBtn" onclick="addEntry()">Add to log</button>
+    <button class="btn-secondary" id="cancelEditBtn" style="width:100%; margin-top:8px; display:none;" onclick="cancelEdit()">Cancel edit</button>
   </div>
 
   <!-- STATS -->
@@ -265,6 +266,7 @@
 
   let allEvents = [];
   let permitDate = null;
+  let editingId = null;
 
   const statusEl = document.getElementById('syncStatus');
   function setStatus(msg, cls) {
@@ -323,7 +325,7 @@
     });
   });
 
-  // ---- ADD ENTRY ----
+  // ---- ADD / UPDATE ENTRY ----
   function addEntry() {
     const date = document.getElementById('fDate').value;
     if (!date) { alert('Please set a date.'); return; }
@@ -339,17 +341,59 @@
     const addBtn = document.getElementById('addBtn');
     addBtn.disabled = true;
 
-    eventsCol.add({ date, types, sections, role, nights, venue, yp, notes, created: Date.now() })
+    const data = { date, types, sections, role, nights, venue, yp, notes };
+    const save = editingId
+      ? eventsCol.doc(editingId).update(data)
+      : eventsCol.add({ ...data, created: Date.now() });
+
+    save
       .then(() => {
-        document.getElementById('fVenue').value = '';
-        document.getElementById('fYP').value = '';
-        document.getElementById('fNotes').value = '';
-        document.getElementById('fNights').value = 1;
-        document.querySelectorAll('#typeChips input, #sectionChips input').forEach(cb => { cb.checked = false; cb.closest('label').classList.remove('checked'); });
-        setStatus('Saved.', 'ok');
+        resetForm();
+        setStatus(editingId ? 'Updated.' : 'Saved.', 'ok');
+        cancelEdit();
       })
       .catch(err => setStatus('Could not save: ' + err.message, 'error'))
       .finally(() => { addBtn.disabled = false; });
+  }
+
+  function resetForm() {
+    document.getElementById('fVenue').value = '';
+    document.getElementById('fYP').value = '';
+    document.getElementById('fNotes').value = '';
+    document.getElementById('fNights').value = 1;
+    document.getElementById('fDate').value = '';
+    document.getElementById('fRole').selectedIndex = 0;
+    document.querySelectorAll('#typeChips input, #sectionChips input').forEach(cb => { cb.checked = false; cb.closest('label').classList.remove('checked'); });
+  }
+
+  function editEntry(id) {
+    const e = allEvents.find(ev => ev.id === id);
+    if (!e) return;
+    editingId = id;
+    document.getElementById('fDate').value = e.date || '';
+    document.getElementById('fRole').value = e.role || 'LIC';
+    document.getElementById('fNights').value = e.nights || 1;
+    document.getElementById('fVenue').value = e.venue || '';
+    document.getElementById('fYP').value = e.yp != null ? e.yp : '';
+    document.getElementById('fNotes').value = e.notes || '';
+    document.querySelectorAll('#typeChips input').forEach(cb => {
+      cb.checked = (e.types || []).includes(cb.value);
+      cb.closest('label').classList.toggle('checked', cb.checked);
+    });
+    document.querySelectorAll('#sectionChips input').forEach(cb => {
+      cb.checked = (e.sections || []).includes(cb.value);
+      cb.closest('label').classList.toggle('checked', cb.checked);
+    });
+    document.getElementById('addBtn').textContent = 'Update entry';
+    document.getElementById('cancelEditBtn').style.display = 'block';
+    document.getElementById('addBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function cancelEdit() {
+    editingId = null;
+    document.getElementById('addBtn').textContent = 'Add to log';
+    document.getElementById('cancelEditBtn').style.display = 'none';
+    resetForm();
   }
 
   function deleteEntry(id) {
@@ -403,6 +447,7 @@
         <div class="entry-meta">${e.role}${e.venue ? ' at ' + e.venue : ''}${e.yp != null ? ' — ' + e.yp + ' young people' : ''}</div>
         ${e.notes ? `<div class="entry-notes">${e.notes.replace(/</g, '&lt;')}</div>` : ''}
         <div class="entry-actions no-print">
+          <button class="btn-secondary btn-small" onclick="editEntry('${e.id}')">Edit</button>
           <button class="btn-danger" onclick="deleteEntry('${e.id}')">Delete</button>
         </div>
       </div>
