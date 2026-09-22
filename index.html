@@ -240,6 +240,7 @@
       <input type="date" id="permitDate">
       <button class="btn-secondary btn-small" style="margin-top:8px;" onclick="saveSettings()">Save permit date</button>
       <span id="permitSaveMsg" style="font-size:12px; color:var(--moss-dark); margin-left:8px; display:none;">Saved ✓</span>
+      <div id="permitHistory" style="margin-top:12px; font-size:12px; color:var(--muted);"></div>
     </div>
   </details>
 
@@ -267,6 +268,7 @@
 
   let allEvents = [];
   let permitDate = null;
+  let permitHistory = [];
   let editingId = null;
 
   const statusEl = document.getElementById('syncStatus');
@@ -284,9 +286,14 @@
   // ---- SETTINGS ----
   function loadSettings() {
     settingsDoc.get().then(doc => {
-      if (doc.exists && doc.data().permitDate) {
-        permitDate = doc.data().permitDate;
-        document.getElementById('permitDate').value = permitDate;
+      if (doc.exists) {
+        const data = doc.data();
+        if (data.permitDate) {
+          permitDate = data.permitDate;
+          document.getElementById('permitDate').value = permitDate;
+        }
+        permitHistory = data.permitHistory || [];
+        renderPermitHistory();
       }
       setDefaultRange();
     }).catch(err => {
@@ -295,10 +302,24 @@
     });
   }
 
+  function renderPermitHistory() {
+    const el = document.getElementById('permitHistory');
+    if (!permitHistory.length) { el.innerHTML = ''; return; }
+    const sorted = [...permitHistory].sort((a, b) => b.localeCompare(a));
+    el.innerHTML = '<strong>Previous issue dates:</strong><br>' + sorted.map(fmtDate).join('<br>');
+  }
+
   function saveSettings() {
     const val = document.getElementById('permitDate').value;
-    settingsDoc.set({ permitDate: val }, { merge: true }).then(() => {
+    if (!val) return;
+    const update = { permitDate: val };
+    if (permitDate && permitDate !== val && !permitHistory.includes(permitDate)) {
+      permitHistory = [...permitHistory, permitDate];
+      update.permitHistory = permitHistory;
+    }
+    settingsDoc.set(update, { merge: true }).then(() => {
       permitDate = val;
+      renderPermitHistory();
       setStatus('Permit date saved.', 'ok');
       const msg = document.getElementById('permitSaveMsg');
       msg.style.display = 'inline';
